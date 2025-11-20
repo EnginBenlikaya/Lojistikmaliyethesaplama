@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Damacana Birim Maliyet Hesaplama (Düzeltilmiş)</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #2c3e50; padding: 20px; color: #ecf0f1; }
+        .container { max-width: 600px; margin: 0 auto; background: #34495e; padding: 30px; border-radius: 15px; box-shadow: 0 15px 30px rgba(0,0,0,0.3); }
+        h2 { text-align: center; color: #f1c40f; margin-top: 0; border-bottom: 2px solid #7f8c8d; padding-bottom: 15px; }
+        
+        .form-group { margin-bottom: 15px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; color: #ecf0f1; font-size: 0.95em; }
+        input[type="text"], input[type="number"] { width: 100%; padding: 12px; border: 2px solid #7f8c8d; border-radius: 8px; font-size: 16px; background: #ecf0f1; color: #2c3e50; box-sizing: border-box; transition: 0.3s; }
+        input:focus { border-color: #f1c40f; outline: none; }
+        
+        #otobanInput { background-color: #fad7a0; color: #d35400; font-weight: bold; }
+
+        button { width: 100%; padding: 15px; background-color: #f39c12; color: #2c3e50; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: background 0.3s; margin-top: 10px; }
+        button:hover { background-color: #d35400; color: white; }
+
+        .result-card { margin-top: 30px; display: none; border: 2px solid #f39c12; border-radius: 10px; overflow: hidden; background: #fff; color: #333; }
+        .result-header { background-color: #f39c12; color: #2c3e50; padding: 15px; text-align: center; font-weight: bold; letter-spacing: 1px; font-size: 1.2em; }
+        .result-body { padding: 20px; }
+        
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
+        .info-label { color: #7f8c8d; font-size: 0.95em; }
+        .info-value { font-weight: bold; color: #2c3e50; }
+        
+        .unit-cost { color: #2980b9; font-size: 1.1em; }
+        .total-cost { background-color: #27ae60; color: white; padding: 15px; text-align: center; font-size: 1.4em; font-weight: bold; border-radius: 8px; margin-top: 15px; }
+        
+        .note { font-size: 0.75em; color: #bdc3c7; text-align: center; margin-top: 20px; line-height: 1.4; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🚚 Damacana Birim Maliyet Hesapalama</h2>
+    <p style="text-align:center; color:#bdc3c7; margin-bottom: 20px;"></p>
+
+    <div class="form-group">
+        <label for="sehirInput">1. Varış Şehri:</label>
+        <input type="text" id="sehirInput" placeholder="Örn: Ankara, İzmir, İstanbul..." oninput="otobanTahminiGetir()" onkeypress="enterBas(event)">
+    </div>
+
+    <div class="form-group">
+        <label for="otobanInput">2. Tahmini Otoyol/Köprü Ücreti (Gidiş-Dönüş):</label>
+        <input type="number" id="otobanInput" value="0">
+        <small style="color:#bdc3c7; display:block; margin-top:3px;">* Şehre göre otomatik tahmin edilir, elle değiştirebilirsiniz.</small>
+    </div>
+
+    <button onclick="hesapla()">Maliyeti Hesapla</button>
+
+    <div id="sonucKutusu" class="result-card">
+        <div class="result-header">SEVKİYAT ANALİZİ</div>
+        <div class="result-body">
+            <div class="info-row">
+                <span class="info-label">Güzergah:</span>
+                <span class="info-value">Gölcük <-> <span id="txtHedef" style="text-transform: capitalize;"></span></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">TIR Rotası (Gidiş-Dönüş):</span>
+                <span class="info-value" style="color:#d35400;" id="txtToplamKm">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Süre (80 km/s):</span>
+                <span class="info-value" id="txtSure">-</span>
+            </div>
+
+            <hr style="border: 0; border-top: 2px dashed #ccc; margin: 15px 0;">
+
+            <div class="info-row">
+                <span class="info-label">Araç Sabit Ücret:</span>
+                <span class="info-value">6.000,00 TL + KDV</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Yakıt Maliyeti:</span>
+                <span class="info-value" id="txtYakit">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Yat Parası (>10s):</span>
+                <span class="info-value" id="txtYat">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Otoyol/Köprü:</span>
+                <span class="info-value" id="txtOtoban">-</span>
+            </div>
+            
+            <div class="info-row" style="background-color: #eaf2f8; padding: 10px; border-radius: 5px; border-bottom: none; margin-top:10px;">
+                <span class="info-label" style="color:#2980b9; font-weight:bold;">Damacana Başı Maliyet:</span>
+                <span class="info-value unit-cost" id="txtBirimMaliyet">-</span>
+            </div>
+
+            <div class="total-cost">
+                TOPLAM: <span id="txtGenelToplam">-</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="note">
+    </div>
+</div>
+
+<script>
+    // Şehir Mesafeleri (Gölcük Merkezli - Tek Yön)
+    const mesafeler = {
+        "adana": 800, "adiyaman": 950, "afyon": 230, "agri": 1300, "aksaray": 530, "amasya": 550, "ankara": 350, "antalya": 600, "artvin": 1150, "aydin": 500, "balikesir": 200, "bilecik": 90, "bingol": 1050, "bitlis": 1250, "bolu": 160, "burdur": 500, "bursa": 75, "canakkale": 350, "corum": 500, "denizli": 400, "diyarbakir": 1150, "duzce": 110, "edirne": 350, "elazig": 1000, "erzincan": 900, "erzurum": 1100, "eskisehir": 200, "gaziantep": 950, "giresun": 800, "gumushane": 950, "hakkari": 1550, "hatay": 950, "isparta": 450, "istanbul": 110, "izmir": 460, "kahramanmaras": 900, "kars": 1300, "kastamonu": 380, "kayseri": 650, "kirikkale": 400, "kirklareli": 320, "kirsehir": 500, "konya": 500, "kutahya": 200, "malatya": 900, "manisa": 430, "mardin": 1250, "mersin": 800, "mugla": 550, "mus": 1150, "nevsehir": 580, "nigde": 600, "ordu": 750, "rize": 1050, "sakarya": 40, "samsun": 600, "siirt": 1300, "sinop": 650, "sivas": 750, "sanliurfa": 1100, "tekirdag": 220, "tokat": 650, "trabzon": 950, "tunceli": 1050, "usak": 330, "van": 1450, "yalova": 50, "yozgat": 550, "zonguldak": 250
+    };
+
+    // TAHMİNİ OTOBAN ÜCRETLERİ (Gidiş-Dönüş / TIR)
+    // DÜZELTME: Gölcük güneyde kaldığı için İzmir, Aydın vb. rotalardan Osmangazi Ücreti düşüldü.
+    const otobanUcretleri = {
+        "izmir": 1800,     // Sadece Bursa-İzmir Otoyolu (Gidiş-Dönüş Tahmini)
+        "istanbul": 1200,  // YSS Köprüsü + Kuzey Marmara
+        "ankara": 450,     // Anadolu Otoyolu
+        "bursa": 100,
+        "tekirdag": 1400,  
+        "edirne": 1500,    
+        "adana": 800,      
+        "mersin": 800,
+        "aydin": 1900,     // Sadece Otoyol
+        "mugla": 1900,     // Sadece Otoyol
+        "manisa": 1700,
+        "sakarya": 80,
+        "duzce": 120,
+        "bolu": 200
+    };
+
+    function formatStr(str) {
+        return str.toLocaleLowerCase('tr-TR').trim()
+           .replace('ğ','g').replace('ü','u').replace('ş','s').replace('ı','i').replace('ö','o').replace('ç','c');
+    }
+
+    function enterBas(e) { if (e.key === "Enter") hesapla(); }
+
+    function otobanTahminiGetir() {
+        const input = document.getElementById('sehirInput').value;
+        const key = formatStr(input);
+        
+        let ucret = 0;
+        if (otobanUcretleri[key]) {
+            ucret = otobanUcretleri[key];
+        } else if (mesafeler[key] && mesafeler[key] > 500) {
+            ucret = 300; 
+        }
+        
+        document.getElementById('otobanInput').value = ucret;
+    }
+
+    function hesapla() {
+        const input = document.getElementById('sehirInput').value;
+        const otobanInputVal = document.getElementById('otobanInput').value;
+        
+        if (!input) { alert("Lütfen bir şehir adı giriniz."); return; }
+
+        const key = formatStr(input);
+        let tekYonKm = mesafeler[key];
+
+        if (tekYonKm === undefined) {
+            tekYonKm = 500; 
+            alert("Şehir veritabanında bulunamadı, ortalama mesafe kullanılıyor.");
+        }
+
+        // 1. Mesafe Hesabı (TIR Çarpanı %7)
+        let toplamKm = (tekYonKm * 2) * 1.07;
+        toplamKm = Math.round(toplamKm);
+
+        // 2. Süre Hesabı (80 km/s)
+        const toplamSureSaat = toplamKm / 80;
+
+        // 3. Maliyet Kalemleri
+        const yakitMaliyeti = (toplamKm / 100) * 39 * 45;
+        
+        let yatParasi = 0;
+        if (toplamSureSaat > 10) yatParasi = 2000;
+
+        let otobanUcreti = parseFloat(otobanInputVal);
+        if (isNaN(otobanUcreti)) otobanUcreti = 0;
+
+        const sabitUcret = 6000;
+
+        // 4. Toplam ve Birim Maliyet
+        const genelToplam = sabitUcret + yakitMaliyeti + yatParasi + otobanUcreti;
+        const birimMaliyet = genelToplam / 1224;
+
+        // --- EKRANA YAZDIRMA ---
+        document.getElementById('txtHedef').innerText = input;
+        document.getElementById('txtToplamKm').innerText = toplamKm + " km";
+        document.getElementById('txtSure').innerText = toplamSureSaat.toFixed(1) + " saat";
+
+        document.getElementById('txtYakit').innerText = formatMoney(yakitMaliyeti);
+        document.getElementById('txtOtoban').innerText = formatMoney(otobanUcreti);
+
+        const yatElement = document.getElementById('txtYat');
+        if (yatParasi > 0) {
+            yatElement.innerText = formatMoney(yatParasi) + " (Eklendi)";
+            yatElement.style.color = "#c0392b";
+        } else {
+            yatElement.innerText = "0,00 TL";
+            yatElement.style.color = "#2c3e50";
+        }
+
+        document.getElementById('txtBirimMaliyet').innerText = formatMoney(birimMaliyet);
+        document.getElementById('txtGenelToplam').innerText = formatMoney(genelToplam);
+        
+        document.getElementById('sonucKutusu').style.display = 'block';
+    }
+
+    function formatMoney(amount) {
+        return amount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " TL + KDV";
+    }
+</script>
+
+</body>
+</html>
